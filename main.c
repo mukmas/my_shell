@@ -12,7 +12,7 @@ int main()
 
     int count = 0;
     char **tokens = NULL;
-    char *token = strtok(line, " ");
+    char *token = strtok(line, " \n");
 
     char **temp = NULL;
     while (token != NULL)
@@ -25,10 +25,15 @@ int main()
             perror("Failed to allocate memory");
             exit(EXIT_FAILURE);
         }
-        temp[count++] = token;
-        token = strtok(NULL, " ");
+        temp[count++] = strdup(token);
+        token = strtok(NULL, " \n");
     }
+    tokens = temp;
 
+    for (int i = 0; i < count; i++)
+    {
+        free(tokens[i]);
+    }
     free(tokens);
     free(line);
 
