@@ -25,10 +25,10 @@ int main()
             perror("Failed to allocate memory");
             exit(EXIT_FAILURE);
         }
+        tokens = temp;
         temp[count++] = strdup(token);
         token = strtok(NULL, " \n");
     }
-    tokens = temp;
 
     for (int i = 0; i < count; i++)
     {
