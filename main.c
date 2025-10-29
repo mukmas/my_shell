@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/wait.h>
 
 char *get_input(void);
 void tokenize_input(int *count, char ***tokens, char *input);
@@ -10,48 +11,55 @@ void tokenize_input(int *count, char ***tokens, char *input);
 int main()
 {
 
-    char *input = get_input();
-    if (input == NULL)
+    while (1)
     {
-        perror("Failed to read input");
-        return 1;
+        char *input = get_input();
+        if (input == NULL)
+        {
+            perror("Failed to read input");
+            return 1;
+        }
+
+        int count = 0;
+        char **tokens = NULL;
+        tokenize_input(&count, &tokens, input);
+        free(input);
+
+        if (count == 0 || tokens[0] == NULL)
+        {
+            continue;
+        }
+
+        if (strcmp(tokens[0], "exit") == 0)
+        {
+            break;
+        }
+
+        pid_t pid;
+
+        pid = fork();
+        switch (pid)
+        {
+        case -1:
+            perror("fork");
+            exit(EXIT_FAILURE);
+
+        case 0:
+            execvp(tokens[0], tokens);
+            exit(EXIT_FAILURE);
+
+        default:
+            wait(NULL);
+            break;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            free(tokens[i]);
+        }
+        free(tokens);
     }
 
-    int count = 0;
-    char **tokens = NULL;
-    tokenize_input(&count, &tokens, input);
-    free(input);
-
-    pid_t pid;
-
-    if (signal(SIGCHLD, SIG_IGN) == SIG_ERR)
-    {
-        perror("signal");
-        exit(EXIT_FAILURE);
-    }
-
-    pid = fork();
-    switch (pid)
-    {
-    case -1:
-        perror("fork");
-        exit(EXIT_FAILURE);
-
-    case 0:
-        printf("I am child");
-        exit(EXIT_SUCCESS);
-
-    default:
-        printf("I am parent");
-    }
-
-    for (int i = 0; i < count; i++)
-    {
-        free(tokens[i]);
-    }
-    free(tokens);
-
-    printf("i returned 0");
     return 0;
 }
 
@@ -89,7 +97,7 @@ void tokenize_input(int *count, char ***tokens, char *input)
         }
         *tokens = temp;
         temp[*count] = strdup(token);
-        (*count++);
+        (*count)++;
         token = strtok(NULL, " \n");
     }
 }
