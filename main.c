@@ -32,6 +32,9 @@ int main()
 
         if (strcmp(tokens[0], "exit") == 0)
         {
+            for (int i = 0; i < count; i++)
+                free(tokens[i]);
+            free(tokens);
             break;
         }
 
@@ -69,6 +72,7 @@ char *get_input(void)
     size_t size = 0;
     ssize_t chars_read;
 
+    printf("shell$ ");
     chars_read = getline(&line, &size, stdin);
 
     if (chars_read == -1)
@@ -91,7 +95,6 @@ void tokenize_input(int *count, char ***tokens, char *input)
         if (temp == NULL)
         {
             free(*tokens);
-            free(input);
             perror("Failed to allocate memory");
             exit(EXIT_FAILURE);
         }
