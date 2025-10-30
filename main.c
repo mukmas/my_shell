@@ -4,21 +4,33 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <pwd.h>
 
+int print_prompt(void);
 char *get_input(void);
 void tokenize_input(int *count, char ***tokens, char *input);
 void free_memory(char **tokens, int count);
+
+#define RESET "\x1b[0m"
+#define RED "\x1b[31m"
+#define YELLOW "\x1b[1;33m"
+#define WHITE "\x1b[97m"
 
 int main()
 {
 
     while (1)
     {
+        if (print_prompt() == 1)
+        {
+            continue;
+        }
+
         char *input = get_input();
         if (input == NULL)
         {
             perror("Failed to read input");
-            exit(EXIT_FAILURE);
+            continue;
         }
 
         int count = 0;
@@ -72,13 +84,39 @@ int main()
     return 0;
 }
 
+int print_prompt(void)
+{
+    // get username
+    struct passwd *pw = getpwuid((getuid()));
+    if (!pw)
+    {
+        perror("getuid failed");
+        return 1;
+    }
+
+    char hostname[1024];
+    if (gethostname(hostname, sizeof(hostname)) == -1)
+    {
+        perror("gethostname failed");
+        return 1;
+    }
+
+    char cwd[1024];
+    if (getcwd(cwd, sizeof(cwd)) == NULL)
+    {
+        perror("getcwd failed");
+        return 1;
+    }
+
+    printf(RED "%s@%s" WHITE ":" YELLOW "%s" RESET WHITE "$" RESET " ", pw->pw_name, hostname, cwd);
+    return 0;
+}
+
 char *get_input(void)
 {
     char *line = NULL;
     size_t size = 0;
     ssize_t chars_read;
-
-    printf("shell$ ");
     chars_read = getline(&line, &size, stdin);
 
     if (chars_read == -1)
@@ -109,7 +147,8 @@ void tokenize_input(int *count, char ***tokens, char *input)
         (*count)++;
         token = strtok(NULL, " \t\n");
     }
-    (*tokens)[(*count)] = NULL;
+    if (*tokens != NULL)
+        (*tokens)[(*count)] = NULL;
 }
 
 void free_memory(char **tokens, int count)
