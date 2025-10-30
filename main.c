@@ -51,7 +51,13 @@ int main()
 
         if (strcmp(tokens[0], "cd") == 0)
         {
-            if (chdir(tokens[1]) == -1)
+            char *dir = tokens[1];
+            if (dir == NULL)
+            {
+                dir = getenv("HOME");
+            }
+
+            if (chdir(dir) == -1)
             {
                 perror("cd failed");
             }
