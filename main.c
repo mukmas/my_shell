@@ -7,6 +7,7 @@
 
 char *get_input(void);
 void tokenize_input(int *count, char ***tokens, char *input);
+void free_memory(char **tokens, int count);
 
 int main()
 {
@@ -17,7 +18,7 @@ int main()
         if (input == NULL)
         {
             perror("Failed to read input");
-            return 1;
+            exit(EXIT_FAILURE);
         }
 
         int count = 0;
@@ -32,10 +33,18 @@ int main()
 
         if (strcmp(tokens[0], "exit") == 0)
         {
-            for (int i = 0; i < count; i++)
-                free(tokens[i]);
-            free(tokens);
+            free_memory(tokens, count);
             break;
+        }
+
+        if (strcmp(tokens[0], "cd") == 0)
+        {
+            if (chdir(tokens[1]) == -1)
+            {
+                perror("cd failed");
+            }
+            free_memory(tokens, count);
+            continue;
         }
 
         pid_t pid;
@@ -45,6 +54,7 @@ int main()
         {
         case -1:
             perror("fork");
+            free_memory(tokens, count);
             exit(EXIT_FAILURE);
 
         case 0:
@@ -56,11 +66,7 @@ int main()
             break;
         }
 
-        for (int i = 0; i < count; i++)
-        {
-            free(tokens[i]);
-        }
-        free(tokens);
+        free_memory(tokens, count);
     }
 
     return 0;
@@ -86,12 +92,12 @@ char *get_input(void)
 
 void tokenize_input(int *count, char ***tokens, char *input)
 {
-    char *token = strtok(input, " \n");
+    char *token = strtok(input, " \t\n");
 
     char **temp = NULL;
     while (token != NULL)
     {
-        temp = realloc(*tokens, sizeof(char *) * (*count + 1));
+        temp = realloc(*tokens, sizeof(char *) * (*count + 2));
         if (temp == NULL)
         {
             free(*tokens);
@@ -101,6 +107,16 @@ void tokenize_input(int *count, char ***tokens, char *input)
         *tokens = temp;
         temp[*count] = strdup(token);
         (*count)++;
-        token = strtok(NULL, " \n");
+        token = strtok(NULL, " \t\n");
     }
+    (*tokens)[(*count)] = NULL;
+}
+
+void free_memory(char **tokens, int count)
+{
+    for (int i = 0; i < count; i++)
+    {
+        free(tokens[i]);
+    }
+    free(tokens);
 }
