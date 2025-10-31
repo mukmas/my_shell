@@ -43,12 +43,14 @@ int main()
             continue;
         }
 
+        // checks for builtin exit command
         if (strcmp(tokens[0], "exit") == 0)
         {
             free_memory(tokens, count);
             break;
         }
 
+        // checks for builtin cd command
         if (strcmp(tokens[0], "cd") == 0)
         {
             char *dir = tokens[1];
@@ -67,6 +69,7 @@ int main()
 
         pid_t pid;
 
+        // fork a new process to execute a command
         pid = fork();
         switch (pid)
         {
@@ -90,6 +93,7 @@ int main()
     return 0;
 }
 
+// gets information about the shell user and prints it in a prompt
 int print_prompt(void)
 {
     // get username
@@ -114,10 +118,12 @@ int print_prompt(void)
         return 1;
     }
 
+    // prints shell prompt
     printf(RED "%s@%s" WHITE ":" YELLOW "%s" RESET WHITE "$" RESET " ", pw->pw_name, hostname, cwd);
     return 0;
 }
 
+// reads a line of input from stdin
 char *get_input(void)
 {
     char *line = NULL;
@@ -134,6 +140,7 @@ char *get_input(void)
     return line;
 }
 
+// tokenizes input by making every word into a separate token
 void tokenize_input(int *count, char ***tokens, char *input)
 {
     char *token = strtok(input, " \t\n");
