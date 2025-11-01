@@ -9,6 +9,8 @@
 int print_prompt(void);
 char *get_input(void);
 void tokenize_input(int *count, char ***tokens, char *input);
+int has_pipe(char **tokens, int count);
+void normal_cmd(char **tokens, int count);
 void free_memory(char **tokens, int count);
 
 #define RESET "\x1b[0m"
@@ -67,24 +69,13 @@ int main()
             continue;
         }
 
-        pid_t pid;
-
-        // fork a new process to execute a command
-        pid = fork();
-        switch (pid)
+        if (has_pipe(tokens, count))
         {
-        case -1:
-            perror("fork");
-            free_memory(tokens, count);
-            exit(EXIT_FAILURE);
-
-        case 0:
-            execvp(tokens[0], tokens);
-            exit(EXIT_FAILURE);
-
-        default:
-            wait(NULL);
-            break;
+            // call function to run command with pipes
+        }
+        else
+        {
+            normal_cmd(tokens, count);
         }
 
         free_memory(tokens, count);
@@ -162,6 +153,39 @@ void tokenize_input(int *count, char ***tokens, char *input)
     }
     if (*tokens != NULL)
         (*tokens)[(*count)] = NULL;
+}
+
+int has_pipe(char **tokens, int count)
+{
+    for (int i = 0; i < count; i++)
+        if (strcmp(tokens[i], "|") == 0)
+        {
+            return 1;
+        }
+    return 0;
+}
+
+// executes a command in a forked process
+void normal_cmd(char **tokens, int count)
+{
+    pid_t pid;
+
+    pid = fork();
+    switch (pid)
+    {
+    case -1:
+        perror("fork");
+        free_memory(tokens, count);
+        exit(EXIT_FAILURE);
+
+    case 0:
+        execvp(tokens[0], tokens);
+        exit(EXIT_FAILURE);
+
+    default:
+        wait(NULL);
+        break;
+    }
 }
 
 void free_memory(char **tokens, int count)
