@@ -10,6 +10,7 @@ int print_prompt(void);
 char *get_input(void);
 void tokenize_input(int *count, char ***tokens, char *input);
 int has_pipe(char **tokens, int count);
+void pipe_cmd(char **tokens, int count, int pipe_index);
 void normal_cmd(char **tokens, int count);
 void free_memory(char **tokens, int count);
 
@@ -69,9 +70,10 @@ int main()
             continue;
         }
 
-        if (has_pipe(tokens, count))
+        int pipe_index = has_pipe(tokens, count);
+        if (pipe_index)
         {
-            // call function to run command with pipes
+            pipe_cmd(tokens, count, pipe_index);
         }
         else
         {
@@ -109,7 +111,6 @@ int print_prompt(void)
         return 1;
     }
 
-    // prints shell prompt
     printf(RED "%s@%s" WHITE ":" YELLOW "%s" RESET WHITE "$" RESET " ", pw->pw_name, hostname, cwd);
     return 0;
 }
@@ -160,9 +161,31 @@ int has_pipe(char **tokens, int count)
     for (int i = 0; i < count; i++)
         if (strcmp(tokens[i], "|") == 0)
         {
-            return 1;
+            return i;
         }
     return 0;
+}
+
+void pipe_cmd(char **tokens, int count, int pipe_index)
+{
+
+    printf("pipe: %i\n", pipe_index);
+    char **cmd1 = malloc(sizeof(char *) * (pipe_index + 1));
+    char **cmd2 = malloc(sizeof(char *) * (count - pipe_index));
+
+    for (int i = 0; i < pipe_index; i++)
+    {
+        cmd1[i] = strdup(tokens[i]);
+    }
+    cmd1[pipe_index] = NULL;
+
+    int j = 0;
+    for (int i = pipe_index + 1; i < count; i++)
+    {
+        cmd2[j] = strdup(tokens[i]);
+        j++;
+    }
+    cmd2[j] = NULL;
 }
 
 // executes a command in a forked process
@@ -175,16 +198,15 @@ void normal_cmd(char **tokens, int count)
     {
     case -1:
         perror("fork");
-        free_memory(tokens, count);
-        exit(EXIT_FAILURE);
+        return;
 
     case 0:
         execvp(tokens[0], tokens);
+        perror("execvp failed");
         exit(EXIT_FAILURE);
 
     default:
         wait(NULL);
-        break;
     }
 }
 
