@@ -9,6 +9,7 @@
 int print_prompt(void);
 char *get_input(void);
 void tokenize_input(int *count, char ***tokens, char *input);
+int handle_builtins(char **tokens);
 int has_pipe(char **tokens, int count);
 void pipe_cmd(char **tokens, int count, int pipe_index);
 void normal_cmd(char **tokens, int count);
@@ -46,32 +47,14 @@ int main()
             continue;
         }
 
-        // checks for builtin exit command
-        if (strcmp(tokens[0], "exit") == 0)
+        if (handle_builtins(tokens) == 1)
         {
-            free_memory(tokens, count);
-            break;
-        }
-
-        // checks for builtin cd command
-        if (strcmp(tokens[0], "cd") == 0)
-        {
-            char *dir = tokens[1];
-            if (dir == NULL)
-            {
-                dir = getenv("HOME");
-            }
-
-            if (chdir(dir) == -1)
-            {
-                perror("cd failed");
-            }
             free_memory(tokens, count);
             continue;
         }
 
         int pipe_index = has_pipe(tokens, count);
-        if (pipe_index)
+        if (pipe_index != -1)
         {
             pipe_cmd(tokens, count, pipe_index);
         }
@@ -156,6 +139,31 @@ void tokenize_input(int *count, char ***tokens, char *input)
         (*tokens)[(*count)] = NULL;
 }
 
+int handle_builtins(char **tokens)
+{
+    if (strcmp(tokens[0], "exit") == 0)
+    {
+        exit(EXIT_SUCCESS);
+    }
+
+    if (strcmp(tokens[0], "cd") == 0)
+    {
+        char *dir = tokens[1];
+        if (dir == NULL)
+        {
+            dir = getenv("HOME");
+        }
+
+        if (chdir(dir) == -1)
+        {
+            perror("cd failed");
+            return -1;
+        }
+        return 1;
+    }
+    return 0;
+}
+
 int has_pipe(char **tokens, int count)
 {
     for (int i = 0; i < count; i++)
@@ -163,7 +171,7 @@ int has_pipe(char **tokens, int count)
         {
             return i;
         }
-    return 0;
+    return -1;
 }
 
 void pipe_cmd(char **tokens, int count, int pipe_index)
@@ -196,6 +204,8 @@ void pipe_cmd(char **tokens, int count, int pipe_index)
     if (pid1 == -1)
     {
         perror("fork");
+        close(pipefd[0]);
+        close(pipefd[1]);
         goto cleanup;
     }
 
@@ -213,6 +223,8 @@ void pipe_cmd(char **tokens, int count, int pipe_index)
     if (pid2 == -1)
     {
         perror("fork");
+        close(pipefd[0]);
+        close(pipefd[1]);
         goto cleanup;
     }
 
