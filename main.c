@@ -168,8 +168,6 @@ int has_pipe(char **tokens, int count)
 
 void pipe_cmd(char **tokens, int count, int pipe_index)
 {
-
-    printf("pipe: %i\n", pipe_index);
     char **cmd1 = malloc(sizeof(char *) * (pipe_index + 1));
     char **cmd2 = malloc(sizeof(char *) * (count - pipe_index));
 
@@ -186,6 +184,64 @@ void pipe_cmd(char **tokens, int count, int pipe_index)
         j++;
     }
     cmd2[j] = NULL;
+
+    int pipefd[2];
+    if (pipe(pipefd) == -1)
+    {
+        perror("pipe");
+        goto cleanup;
+    }
+
+    pid_t pid1 = fork();
+    if (pid1 == -1)
+    {
+        perror("fork");
+        goto cleanup;
+    }
+
+    if (pid1 == 0)
+    {
+        dup2(pipefd[1], STDOUT_FILENO);
+        close(pipefd[0]);
+        close(pipefd[1]);
+        execvp(cmd1[0], cmd1);
+        perror("execvp failed");
+        exit(EXIT_FAILURE);
+    }
+
+    pid_t pid2 = fork();
+    if (pid2 == -1)
+    {
+        perror("fork");
+        goto cleanup;
+    }
+
+    if (pid2 == 0)
+    {
+        dup2(pipefd[0], STDIN_FILENO);
+        close(pipefd[0]);
+        close(pipefd[1]);
+        execvp(cmd2[0], cmd2);
+        perror("execvp failed");
+        exit(EXIT_FAILURE);
+    }
+    close(pipefd[0]);
+    close(pipefd[1]);
+    wait(NULL);
+    wait(NULL);
+
+cleanup:
+    for (int i = 0; i < pipe_index; i++)
+    {
+        free(cmd1[i]);
+    }
+    free(cmd1);
+
+    for (int j = 0; j < count - pipe_index - 1; j++)
+    {
+        free(cmd2[j]);
+    }
+    free(cmd2);
 }
 
 // executes a command in a forked process
