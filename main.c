@@ -47,7 +47,7 @@ int main()
             continue;
         }
 
-        if (handle_builtins(tokens) == 1)
+        if (handle_builtins(tokens) != 0)
         {
             free_memory(tokens, count);
             continue;
